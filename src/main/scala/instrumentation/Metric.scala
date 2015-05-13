@@ -26,7 +26,6 @@ object Metric {
 
 	def countRoutingPaths(g: Graph[sphere.Units.Node, UnDiEdge], g0: Graph[sphere.Units.Node, UnDiEdge])
 	                     (ancestorRouteMap: Map[(g0.NodeT, g0.NodeT),g0.Path]): Map[Int, Int] = {
-		import sphere.Units.Node
 		countPaths(g)(sphere.Routing.sphereRouter(g0)(ancestorRouteMap))
 	}
 
@@ -50,6 +49,9 @@ object Metric {
 			}
 		}
 
+		// Cache graphSize because it's O(n)
+		val graphSize = g.nodes.size
+
 		// Split into smaller computation groups, and reduce them individually.
 		// To prevent memory issues.
 		val nrNodes = g.nodes.size
@@ -58,7 +60,7 @@ object Metric {
 			// Map the group in parallel.
 			group.par.map({
 				case Seq(node1, node2) =>
-					router.route(g,nrNodes)(node1, node2)
+					router.route(g, graphSize)(node1, node2)
 			})
 				// Transform the path to a map of layer nr and count.
 				.map(pathToLayers)
