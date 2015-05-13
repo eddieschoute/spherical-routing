@@ -89,27 +89,21 @@ object Routing {
 	 *         Then routing must occur on the lowest layer.
 	 */
 	def closestAncestor(g: Graph[Node, UnDiEdge])(node1: g.NodeT, node2: g.NodeT): Option[g.NodeT] = {
-		val allNode2Parents = node2.label.reduce(_ ++ _)
-		val nonEmptyIntersection = node1.label.find { labelEntries1 ⇒
-			(labelEntries1 intersect allNode2Parents).nonEmpty
-		}
-//		val firstNonEmptyIntersection = node1.label.view.map { entries1 =>
-//			node2.label.view.map(_ intersect entries1).find(_.nonEmpty)
-//		} find (_.isDefined) flatten
+		val allNode2IDs = node2.label.reduce(_ ++ _)
+		// Lazily get the first non-empty intersection
+		val firstNonEmptyIntersection = node1.label.view.map { set ⇒
+			allNode2IDs intersect set
+		}.find(_.nonEmpty)
 
-		// Then take the elements from the nonEmptyIntersection which are closest to node2.
-		for(intersection ← nonEmptyIntersection) yield {
-			val groupedByDistance = intersection.groupBy { i ⇒
-				node2.label.indexWhere(_.contains(i))
-			}
-
-			val minDistance = groupedByDistance.minBy {
-				case (k,v) ⇒ k
-			}._2
+		for(firstIntersection ← firstNonEmptyIntersection) yield {
+			// Get only those from the intersection which are closest to node2.
+			val closestIntersection = node2.label.view.map { set2 ⇒
+				set2 intersect firstIntersection
+			}.find(_.nonEmpty).get // There must be an intersection at some point.
 
 			// Pick a random ancestor, if there are two equidistant.
-			val id = Random.shuffle(minDistance.toSeq).head
-			// If we found the id, the ancestor must exist, so `get` it.
+			val id = Random.shuffle(closestIntersection.toSeq).head
+			// The ancestor must exist
 			g.nodes.find(_.id == id).get
 		}
 	}
